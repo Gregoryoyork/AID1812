@@ -1,9 +1,12 @@
 import datetime,os,pymysql
+
+import math
 from flask import Flask, request
 from flask import render_template
 from flask_sqlalchemy import SQLAlchemy
 from flask_script import Manager
 from flask_migrate import Migrate,MigrateCommand
+from sqlalchemy import or_
 
 app = Flask(__name__)
 
@@ -112,12 +115,44 @@ def login_views():
         else:
             return "<script>alert('NOT OK');location.href='/login';</script>"
 
+@app.route('/query')
+def query_views():
+    kw = request.args.get('kw')
+    if kw:
+        users = db.session.query(Users).filter(
+            or_(
+                Users.name.like('%'+kw+'%'),
+                Users.email.like('%'+kw+'%')
+                )
+        ).all()
+    else:
+        users = db.session.query(Users).all()
+    return render_template('query.html',users=users,kw=kw)
 
 
 
+#=============got===you=============down=already====================================================
+@app.route('/01-page')
+def page_views():
+    pageSize = 2
+    page = int(request.args.get('page','1'))
+    ost = (page-1)*pageSize
+    users = db.session.query(Users).offset(ost).limit(pageSize).all()
+    totalCount = db.session.query(Users).count()
+    lastPage = math.ceil(totalCount/pageSize)
+
+    #上一页prevPage和下一页nextPage
+    prevPage = 1
+    if page > 1:
+        prevPage = page - 1
+
+    nextPage = lastPage
+    if page < lastPage:
+        nextPage = page + 1
 
 
-
+    return render_template('01-page.html',users=users,lastPage=lastPage,nextPage=nextPage,
+                           prevPage=prevPage)
 
 
 
